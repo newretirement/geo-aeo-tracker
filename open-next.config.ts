@@ -1,5 +1,7 @@
 import { defineCloudflareConfig } from "@opennextjs/cloudflare";
 
-// Defaults: no incremental cache. Every page here is either static or
-// force-dynamic, so there is nothing for ISR to store.
+// Default (dummy) incremental cache: no route uses ISR or revalidate. Pages
+// are therefore rendered per request rather than served from the build
+// output, which is also what lets app/page.tsx see BRIGHT_DATA_KEY, a runtime
+// secret, and leave demo mode.
 export default defineCloudflareConfig();

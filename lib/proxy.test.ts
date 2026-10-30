@@ -83,3 +83,32 @@ test("x-vercel-forwarded-for wins over a spoofed x-forwarded-for", () => {
   );
   assert.equal(statuses[30], 429);
 });
+
+test("cf-connecting-ip wins over a spoofed x-real-ip", () => {
+  process.env.NEXT_PUBLIC_DEMO_ONLY = "false";
+  const statuses = Array.from(
+    { length: 31 },
+    (_, i) =>
+      proxy(
+        req("/api/cf-ip", "text/html", {
+          "cf-connecting-ip": "6.6.6.6",
+          "x-real-ip": `3.3.3.${i}`,
+        }),
+      ).status,
+  );
+  assert.equal(statuses[30], 429);
+});
+
+test("Access user email buckets per person, not per shared IP", () => {
+  process.env.NEXT_PUBLIC_DEMO_ONLY = "false";
+  const hit = (email: string) =>
+    proxy(
+      req("/api/cf-user", "text/html", {
+        "cf-access-authenticated-user-email": email,
+        "cf-connecting-ip": "8.8.4.4",
+      }),
+    ).status;
+  for (let i = 0; i < 30; i++) assert.equal(hit("a@boldin.com"), 200);
+  assert.equal(hit("a@boldin.com"), 429);
+  assert.equal(hit("b@boldin.com"), 200);
+});

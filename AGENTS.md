@@ -63,7 +63,7 @@ Never commit `.env`. `.gitignore` excludes `.env*` except `.env.example`.
 
 ### API routes
 
-All routes are unauthenticated except `state`. Limits are requests per IP per path per minute from `proxy.ts`. Paths not listed there get 30. The client IP is `x-vercel-forwarded-for`, then `x-real-ip`, then the last `x-forwarded-for` hop. On demo deploys none of these routes answer (403).
+All routes are unauthenticated except `state`. Limits are requests per IP per path per minute from `proxy.ts`. Paths not listed there get 30. The client key is `cf-access-authenticated-user-email`, then `cf-connecting-ip` (both set by Cloudflare), then `x-vercel-forwarded-for`, then `x-real-ip`, then the last `x-forwarded-for` hop. On demo deploys none of these routes answer (403).
 
 | File | Method | Purpose | Limit | Bills |
 |---|---|---|---|---|

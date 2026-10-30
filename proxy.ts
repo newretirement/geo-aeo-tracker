@@ -61,8 +61,14 @@ export function proxy(req: NextRequest) {
 
   // The first x-forwarded-for entry is client-supplied and spoofable; the last
   // one is appended by the nearest proxy.
+  //
+  // On Cloudflare, prefer headers the edge sets and a client cannot forge:
+  // the Access user's email (one bucket per person, even behind a shared
+  // office IP), then cf-connecting-ip. x-real-ip is not Cloudflare-owned.
   const xff = req.headers.get("x-forwarded-for")?.split(",").pop()?.trim();
   const ip =
+    req.headers.get("cf-access-authenticated-user-email")?.trim() ||
+    req.headers.get("cf-connecting-ip")?.trim() ||
     req.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip")?.trim() ||
     xff ||

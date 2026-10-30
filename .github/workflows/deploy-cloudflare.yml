@@ -5,27 +5,33 @@ on:
   workflow_dispatch:
 concurrency:
   group: deploy-cloudflare
-  cancel-in-progress: false # Queue merges so each one deploys in order.
+  # Don't cancel a deploy mid-flight; a newer pending run supersedes older queued ones.
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
   deploy:
-    # Only Boldin's fork deploys; upstream and other forks have no token.
-    if: github.repository == 'newretirement/geo-aeo-tracker'
+    # Only Boldin's fork, and only main: a manual run on another branch must
+    # not reach production. Upstream and other forks have no token anyway.
+    if: github.repository == 'newretirement/geo-aeo-tracker' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: production
       url: https://geo.prod.boldin.com
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      # Inlined at build time for the sitemap and page metadata.
-      NEXT_PUBLIC_SITE_URL: https://geo.prod.boldin.com
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: { node-version: 22, cache: npm }
+      # No Cloudflare token in these steps. Install scripts, tests and the
+      # build run third-party and upstream code; only the deploy step needs it.
       - run: npm ci
       - run: npm test
       - run: npm run cf:build
+      - name: Refuse to deploy unless Access already gates the hostname
+        run: scripts/check-access.sh geo.prod.boldin.com
       - name: Deploy, tagged with the commit
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx wrangler deploy --tag "${GITHUB_SHA::7}"
+      - name: Confirm Access still gates the hostname
+        run: scripts/check-access.sh geo.prod.boldin.com
