@@ -13,7 +13,7 @@
   "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
   // The custom domain is the only way in, and Cloudflare Access gates it:
   // "Geo-Tracker (prod)" in terraform-cloudflare-boldin zone/, group
-  // geo-tracker@boldin.com. The app has no login of its own, so a workers.dev
+  // all@boldin.com. The app has no login of its own, so a workers.dev
   // or preview URL would be an ungated door to the paid API keys.
   "workers_dev": false,
   "preview_urls": false,
