@@ -49,3 +49,8 @@ guidelines.md
 
 # session handoff notes (auto-generated, not part of the app)
 HANDOFF.md
+
+# Cloudflare / OpenNext
+.open-next/
+.wrangler/
+.dev.vars*

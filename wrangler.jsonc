@@ -1,0 +1,27 @@
+{
+  // Boldin's deployment of this app as a Cloudflare Worker, via OpenNext.
+  // Build with `npm run cf:build`; CI deploys on push to main.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "geo-aeo-tracker",
+  "account_id": "aec67a3c3df77944f45b179d93c4223f",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  // nodejs_compat: the API routes use node:crypto and Buffer.
+  // global_fetch_strictly_public: server-side fetches to user-supplied URLs
+  // cannot reach other Workers on this zone (complements lib/server/ssrf.ts).
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  // The custom domain is the only way in, and Cloudflare Access gates it:
+  // "Geo-Tracker (prod)" in terraform-cloudflare-boldin zone/, group
+  // geo-tracker@boldin.com. The app has no login of its own, so a workers.dev
+  // or preview URL would be an ungated door to the paid API keys.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "geo.prod.boldin.com", "custom_domain": true }],
+  "observability": { "enabled": true },
+  "vars": {
+    "OPENROUTER_MODEL": "google/gemini-3.5-flash"
+  }
+  // Secrets (wrangler secret put <NAME>): BRIGHT_DATA_KEY, OPENROUTER_KEY,
+  // GEMINI_API_KEY. All optional; see .env.example for what each unlocks.
+}
