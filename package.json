@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "tsx --test \"lib/**/*.test.ts\" \"tests/**/*.test.mjs\"",
     "test:scraper": "node --env-file=.env scripts/test-scraper.js",
-    "test:pillar": "node scripts/test-pillar.js"
+    "test:pillar": "node scripts/test-pillar.js",
+    "cf:build": "opennextjs-cloudflare build",
+    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",
@@ -22,6 +25,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.15",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -30,7 +34,8 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "^4.156.0"
   },
   "overrides": {
     "eslint-plugin-react-hooks": "7.0.1"
