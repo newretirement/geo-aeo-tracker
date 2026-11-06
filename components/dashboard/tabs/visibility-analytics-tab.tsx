@@ -22,6 +22,10 @@ const PROVIDER_COLORS: Record<string, string> = {
   copilot: "#0a84ff",
   gemini: "#4285f4",
   google_ai: "#ea8600",
+  chatgpt_api: "#0d8a6c",
+  claude_api: "#d97757",
+  gemini_api: "#1a73e8",
+  perplexity_api: "#1591a5",
 };
 
 type VisibilityAnalyticsTabProps = {

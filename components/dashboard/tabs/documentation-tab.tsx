@@ -199,6 +199,7 @@ const sections: DocSection[] = [
       "• Copilot — Microsoft's AI assistant",
       "• Gemini — Google's multimodal AI",
       "• Google AI — Google AI Mode answers",
+      "With OPENROUTER_KEY, 4 API engines are also available, each with live web search: ChatGPT (API), Claude (API), Gemini (API) and Perplexity (API). These are API answers rather than the consumer apps, so they can differ slightly from what a signed-in user sees. The toolbar shows only engines this deployment has keys for.",
       "Toggle models on/off in the toolbar. Run prompts across any combination simultaneously.",
     ],
   },

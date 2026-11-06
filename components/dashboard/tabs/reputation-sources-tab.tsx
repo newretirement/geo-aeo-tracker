@@ -140,6 +140,10 @@ const PROVIDER_COLORS: Record<Provider, string> = {
   copilot: "#7c5bbf",
   gemini: "#4285f4",
   google_ai: "#ea4335",
+  chatgpt_api: "#0d8a6c",
+  claude_api: "#d97757",
+  gemini_api: "#1a73e8",
+  perplexity_api: "#1591a5",
 };
 
 function ProviderBadge({ provider }: { provider: Provider }) {

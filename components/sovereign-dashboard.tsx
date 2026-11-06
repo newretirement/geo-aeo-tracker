@@ -313,10 +313,38 @@ function saveWithNotice(
 export function SovereignDashboard({
   demoMode = false,
   demoReason = "explicit",
-}: { demoMode?: boolean; demoReason?: "explicit" | "no-key" } = {}) {
+  providers: availableProviderList,
+}: {
+  demoMode?: boolean;
+  demoReason?: "explicit" | "no-key";
+  /** Engines this deployment has keys for. Defaults to every engine. */
+  providers?: Provider[];
+} = {}) {
+  // Demo mode shows sample runs from every engine; live mode only offers
+  // engines the server can actually reach.
+  // Keyed on the joined list so a new-but-equal array never re-runs effects.
+  const providerKey =
+    demoMode || !availableProviderList?.length
+      ? ""
+      : availableProviderList.join(",");
+  const providers = useMemo<Provider[]>(
+    () => (providerKey ? (providerKey.split(",") as Provider[]) : ALL_PROVIDERS),
+    [providerKey],
+  );
+  const initialState = useMemo<AppState>(
+    () =>
+      providers.includes(defaultState.provider)
+        ? defaultState
+        : {
+            ...defaultState,
+            provider: providers[0],
+            activeProviders: [providers[0]],
+          },
+    [providers],
+  );
   const [activeTab, setActiveTab] = useState<TabKey>("Visibility Analytics");
   const [state, setState] = useState<AppState>(
-    demoMode ? DEMO_STATE : defaultState,
+    demoMode ? DEMO_STATE : initialState,
   );
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(
@@ -416,15 +444,15 @@ export function SovereignDashboard({
       if (mounted) {
         // Merge saved state with defaults so new fields are never undefined
         const merged: AppState = {
-          ...defaultState,
+          ...initialState,
           ...data,
-          brand: { ...defaultState.brand, ...(data.brand ?? {}) },
-          provider: ALL_PROVIDERS.includes(data.provider as Provider)
+          brand: { ...initialState.brand, ...(data.brand ?? {}) },
+          provider: providers.includes(data.provider as Provider)
             ? (data.provider as Provider)
-            : defaultState.provider,
+            : initialState.provider,
           activeProviders: Array.isArray(data.activeProviders)
             ? data.activeProviders.filter((provider): provider is Provider =>
-                ALL_PROVIDERS.includes(provider as Provider),
+                providers.includes(provider as Provider),
               )
             : [],
         };
@@ -468,7 +496,7 @@ export function SovereignDashboard({
     return () => {
       mounted = false;
     };
-  }, [activeWsId, demoMode]);
+  }, [activeWsId, demoMode, initialState, providers]);
 
   useEffect(() => {
     if (demoMode || !activeWsId || !hydratedRef.current) return;
@@ -962,7 +990,7 @@ export function SovereignDashboard({
 
       if (runs.length === 0) {
         setMessage(
-          "All scrape requests failed. Check your Bright Data config.",
+          "All scrape requests failed. Check your Bright Data or OpenRouter config.",
         );
         return;
       }
@@ -1842,7 +1870,7 @@ ${exampleJson}`,
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-th-accent" />
             <span>
               {demoReason === "no-key"
-                ? "Demo data. Changes are not saved. Add BRIGHT_DATA_KEY to your environment to track live AI engines"
+                ? "Demo data. Changes are not saved. Add BRIGHT_DATA_KEY or OPENROUTER_KEY to your environment to track live AI engines"
                 : "Demo data. Changes are not saved and live API calls are off"}
             </span>
           </div>
@@ -1877,7 +1905,7 @@ ${exampleJson}`,
             Models
           </label>
           <div className="flex items-center gap-1 overflow-x-auto">
-            {ALL_PROVIDERS.map((p) => {
+            {providers.map((p) => {
               const active = state.activeProviders.includes(p);
               return (
                 <button
@@ -1915,19 +1943,19 @@ ${exampleJson}`,
                 setState((prev) => ({
                   ...prev,
                   activeProviders:
-                    prev.activeProviders.length === ALL_PROVIDERS.length
+                    prev.activeProviders.length === providers.length
                       ? [prev.provider]
-                      : [...ALL_PROVIDERS],
+                      : [...providers],
                 }))
               }
               className="ml-1 rounded-md border border-th-border px-2 py-1 text-xs text-th-text-muted hover:bg-th-card-hover hover:text-th-text-secondary"
               title={
-                state.activeProviders.length === ALL_PROVIDERS.length
+                state.activeProviders.length === providers.length
                   ? "Select only one"
                   : "Select all models"
               }
             >
-              {state.activeProviders.length === ALL_PROVIDERS.length
+              {state.activeProviders.length === providers.length
                 ? "1"
                 : "All"}
             </button>
