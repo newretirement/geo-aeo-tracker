@@ -30,8 +30,9 @@ Source of truth: `.env.example`. All are optional. The app builds and boots with
 
 | Variable | Used by | Without it |
 |---|---|---|
-| `BRIGHT_DATA_KEY` | all scraping routes, `app/page.tsx` | Home page switches to demo data. Scrape routes return errors. **Bills Bright Data** |
-| `OPENROUTER_KEY` | `app/api/analyze/route.ts`, `app/api/site-context/route.ts`, `lib/server/openrouter-sro.ts` | Analysis panels show "not configured". Scraping still works. **Bills OpenRouter** |
+| `BRIGHT_DATA_KEY` | all scraping routes, `app/page.tsx` | The five consumer-app engines are hidden. With no `OPENROUTER_KEY` either, the home page switches to demo data. **Bills Bright Data** |
+| `OPENROUTER_KEY` | `app/api/analyze/route.ts`, `app/api/site-context/route.ts`, `lib/server/openrouter-sro.ts`, `lib/server/openrouter-engines.ts`, `app/page.tsx` | Analysis panels show "not configured" and the four API engines are hidden. **Bills OpenRouter** |
+| `OPENROUTER_ENGINE_MODEL_<ENGINE>` | `lib/server/openrouter-engines.ts` | Per-engine model override, e.g. `OPENROUTER_ENGINE_MODEL_CLAUDE_API`. Defaults are in that file |
 | `OPENROUTER_MODEL` | same files | Defaults to `google/gemini-3.5-flash` |
 | `GEMINI_API_KEY` | `lib/server/gemini-grounding.ts` | Only the SRO grounding stage is skipped. **Bills Google** |
 | `BRIGHT_DATA_SERP_ZONE` | `lib/server/serp.ts` | Defaults to `serp_api1` |
@@ -67,7 +68,7 @@ All routes are unauthenticated except `state`. Limits are requests per IP per pa
 
 | File | Method | Purpose | Limit | Bills |
 |---|---|---|---|---|
-| `app/api/scrape/route.ts` | POST | One AI engine query via a Bright Data dataset | 20 | Bright Data |
+| `app/api/scrape/route.ts` | POST | One AI engine query: a Bright Data dataset for the consumer-app engines, or OpenRouter with web search for the `*_api` engines | 20 | Bright Data or OpenRouter |
 | `app/api/brightdata-platforms/route.ts` | POST | Query all engines, or one platform, for a keyword | 12 | Bright Data |
 | `app/api/bulk-sro/route.ts` | POST | Full SRO pipeline, streamed as server-sent events | 4 | Every vendor |
 | `app/api/sro-analyze/route.ts` | POST | SRO scoring from prior stage output | 20 | OpenRouter |
@@ -82,7 +83,7 @@ All routes are unauthenticated except `state`. Limits are requests per IP per pa
 ## Conventions
 
 - **Next 16 uses `proxy.ts`, not `middleware.ts`.** Export a function named `proxy` and a `config.matcher`. Do not create `middleware.ts`.
-- **Demo mode.** `app/page.tsx` sets demo when `NEXT_PUBLIC_DEMO_ONLY` is `true` or `BRIGHT_DATA_KEY` is empty. In `components/sovereign-dashboard.tsx`, `demoMode` skips workspace load and save. Changing the flag needs a rebuild.
+- **Demo mode.** `app/page.tsx` sets demo when `NEXT_PUBLIC_DEMO_ONLY` is `true` or neither `BRIGHT_DATA_KEY` nor `OPENROUTER_KEY` is set. Otherwise it passes the engines those keys unlock (`availableProviders` in `components/dashboard/types.ts`) to the dashboard, which offers only those. In `components/sovereign-dashboard.tsx`, `demoMode` skips workspace load and save. Changing the flag needs a rebuild.
 - **Local-first.** No server database by default. Read and write app state through `loadSovereignValue` and `saveSovereignValue` in `lib/client/sovereign-store.ts`. Do not call `/api/state` directly from tabs.
 - **Validation.** Every route defines a zod schema at the top and parses the body before doing work. Follow that shape. Cap array sizes and string lengths for anything that reaches an LLM prompt (see `app/api/sro-analyze/route.ts`).
 - **Outbound calls.** Use `fetchWithTimeout` or `withTimeout` from `lib/server/http.ts`. Every upstream call needs a deadline.
@@ -92,6 +93,9 @@ All routes are unauthenticated except `state`. Limits are requests per IP per pa
 - **Rate limits.** A new route gets the default 30 per minute. Add an entry to `LIMITS` in `proxy.ts` if it calls a paid API.
 
 ### Add an AI engine
+
+An OpenRouter (API) engine is three edits: add it to `OpenRouterProvider` and `OPENROUTER_PROVIDERS` in `components/dashboard/types.ts`, to `OpenRouterProviderSchema` and `DEFAULT_ENGINE_MODELS` in `lib/server/openrouter-engines.ts`, and to `PROVIDER_LABELS` plus the two `PROVIDER_COLORS` maps. A Bright Data (consumer-app) engine:
+
 
 1. Extend `Provider`, `ALL_PROVIDERS` and `PROVIDER_LABELS` in `components/dashboard/types.ts`.
 2. Add it to the `z.enum` in `app/api/scrape/route.ts`, and to `ProviderSchema` and `providerToDatasetEnv` in `lib/server/brightdata-scraper.ts`, with a default dataset ID.

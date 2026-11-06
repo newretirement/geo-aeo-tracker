@@ -1,9 +1,23 @@
-export type Provider =
+/** Engines scraped from the consumer apps through Bright Data (BRIGHT_DATA_KEY). */
+export type BrightDataProvider =
   | "chatgpt"
   | "perplexity"
   | "copilot"
   | "gemini"
   | "google_ai";
+
+/**
+ * Engines queried through the OpenRouter API with web search (OPENROUTER_KEY).
+ * API answers, not the consumer apps: no app system prompt or personalization.
+ * Model IDs live in lib/server/openrouter-engines.ts.
+ */
+export type OpenRouterProvider =
+  | "chatgpt_api"
+  | "claude_api"
+  | "gemini_api"
+  | "perplexity_api";
+
+export type Provider = BrightDataProvider | OpenRouterProvider;
 
 export type ScrapeRun = {
   provider: Provider;
@@ -78,7 +92,7 @@ export type Workspace = {
   createdAt: string;
 };
 
-export const ALL_PROVIDERS: Provider[] = [
+export const BRIGHT_DATA_PROVIDERS: BrightDataProvider[] = [
   "chatgpt",
   "perplexity",
   "copilot",
@@ -86,12 +100,43 @@ export const ALL_PROVIDERS: Provider[] = [
   "google_ai",
 ];
 
+export const OPENROUTER_PROVIDERS: OpenRouterProvider[] = [
+  "chatgpt_api",
+  "claude_api",
+  "gemini_api",
+  "perplexity_api",
+];
+
+export const ALL_PROVIDERS: Provider[] = [
+  ...BRIGHT_DATA_PROVIDERS,
+  ...OPENROUTER_PROVIDERS,
+];
+
+export function isOpenRouterProvider(p: Provider): p is OpenRouterProvider {
+  return (OPENROUTER_PROVIDERS as Provider[]).includes(p);
+}
+
+/** Engines this deployment has keys for, in display order. */
+export function availableProviders(keys: {
+  brightData: boolean;
+  openRouter: boolean;
+}): Provider[] {
+  return [
+    ...(keys.brightData ? BRIGHT_DATA_PROVIDERS : []),
+    ...(keys.openRouter ? OPENROUTER_PROVIDERS : []),
+  ];
+}
+
 export const PROVIDER_LABELS: Record<Provider, string> = {
   chatgpt: "ChatGPT",
   perplexity: "Perplexity",
   copilot: "Copilot",
   gemini: "Gemini",
   google_ai: "Google AI",
+  chatgpt_api: "ChatGPT (API)",
+  claude_api: "Claude (API)",
+  gemini_api: "Gemini (API)",
+  perplexity_api: "Perplexity (API)",
 };
 
 /** Countries available for geo-scoped AI-visibility tracking (Bright Data geolocation, 2-letter codes) */
