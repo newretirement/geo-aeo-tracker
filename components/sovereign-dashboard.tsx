@@ -162,6 +162,11 @@ const WORKSPACES_KEY = "sovereign-workspaces";
 const ACTIVE_WS_KEY = "sovereign-active-workspace";
 const THEME_KEY = "sovereign-theme";
 
+// Sized for a 150-prompt library run across 4 engines (600 results a run).
+// State lives in IndexedDB, so a few MB of saved answers is fine.
+const MAX_TRACKING_PROMPTS = 200;
+const MAX_STORED_RUNS = 2000;
+
 function storageKeyForWorkspace(wsId: string) {
   return wsId === "default" ? STORAGE_KEY : `sovereign-aeo-tracker-${wsId}`;
 }
@@ -598,7 +603,7 @@ export function SovereignDashboard({
 
     setState((prev) => ({
       ...prev,
-      runs: [...allRuns, ...prev.runs].slice(0, 500),
+      runs: [...allRuns, ...prev.runs].slice(0, MAX_STORED_RUNS),
       lastScheduledRun: new Date().toISOString(),
       driftAlerts: [...newAlerts, ...prev.driftAlerts].slice(0, 100),
     }));
@@ -997,7 +1002,7 @@ export function SovereignDashboard({
 
       setState((prev) => ({
         ...prev,
-        runs: [...runs, ...prev.runs].slice(0, 500),
+        runs: [...runs, ...prev.runs].slice(0, MAX_STORED_RUNS),
       }));
 
       const failed = count - runs.length;
@@ -1054,7 +1059,7 @@ export function SovereignDashboard({
 
     setState((prev) => ({
       ...prev,
-      runs: [...allRuns, ...prev.runs].slice(0, 500),
+      runs: [...allRuns, ...prev.runs].slice(0, MAX_STORED_RUNS),
     }));
 
     setMessage(
@@ -1080,14 +1085,18 @@ export function SovereignDashboard({
   function addCustomPrompt(value: string) {
     const cleaned = value.trim();
     if (!cleaned) return;
+    // Refuse at the cap rather than silently dropping the oldest prompt.
+    if (state.customPrompts.length >= MAX_TRACKING_PROMPTS) {
+      setMessage(
+        `Prompt limit reached (${MAX_TRACKING_PROMPTS}). Remove one to add another.`,
+      );
+      return;
+    }
     setState((prev) => {
       if (prev.customPrompts.some((p) => p.text === cleaned)) return prev;
       return {
         ...prev,
-        customPrompts: [
-          { text: cleaned, tags: [] },
-          ...prev.customPrompts,
-        ].slice(0, 50),
+        customPrompts: [{ text: cleaned, tags: [] }, ...prev.customPrompts],
       };
     });
     setMessage("Tracking prompt added.");
