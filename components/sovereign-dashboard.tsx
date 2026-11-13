@@ -20,6 +20,7 @@ import {
   findMentions,
 } from "@/lib/scoring";
 import { retryAfterMs, runPool } from "@/lib/pool";
+import { summarizeFailures } from "@/lib/shared/scrape-errors";
 import { DEMO_STATE } from "@/lib/demo-data";
 import { AeoAuditTab } from "@/components/dashboard/tabs/aeo-audit-tab";
 import { AutomationTab } from "@/components/dashboard/tabs/automation-tab-v2";
@@ -589,14 +590,17 @@ export function SovereignDashboard({
     setMessage("Auto-run: Starting scheduled batch…");
 
     const allRuns: ScrapeRun[] = [];
+    const allResults: PromiseSettledResult<ScrapeRun | null>[] = [];
     for (const prompt of prompts) {
       const results = await Promise.allSettled(
         providers.map((p) => callScrapeOneRef.current(prompt, p)),
       );
+      allResults.push(...results);
       for (const r of results) {
         if (r.status === "fulfilled" && r.value) allRuns.push(r.value);
       }
     }
+    const failures = summarizeFailures(allResults);
 
     // Detect drift against existing runs
     const newAlerts = detectDrift(allRuns, s.runs);
@@ -609,7 +613,7 @@ export function SovereignDashboard({
     }));
 
     setMessage(
-      `Auto-run complete: ${allRuns.length} results.${newAlerts.length > 0 ? ` ${newAlerts.length} drift alert${newAlerts.length > 1 ? "s" : ""} triggered.` : ""}`,
+      `Auto-run complete: ${allRuns.length} results.${newAlerts.length > 0 ? ` ${newAlerts.length} drift alert${newAlerts.length > 1 ? "s" : ""} triggered.` : ""}${failures ? ` Failed: ${failures}` : ""}`,
     );
     setBusy(false);
   }, []);
@@ -966,8 +970,11 @@ export function SovereignDashboard({
         competitorMentions: findMentions(answerText, competitorTerms),
         country: state.country,
       };
-    } catch {
-      return null;
+    } catch (error) {
+      // Rethrow with the engine name so callers can show why it failed.
+      const reason =
+        error instanceof Error ? error.message : "Scrape request failed";
+      throw new Error(`${PROVIDER_LABELS[provider]}: ${reason}`);
     }
   }
 
@@ -993,9 +1000,13 @@ export function SovereignDashboard({
         .map((r) => (r.status === "fulfilled" ? r.value : null))
         .filter((r): r is ScrapeRun => r !== null);
 
+      const failures = summarizeFailures(results);
+
       if (runs.length === 0) {
         setMessage(
-          "All scrape requests failed. Check your Bright Data or OpenRouter config.",
+          failures
+            ? `All scrape requests failed. ${failures}`
+            : "All scrape requests failed. Check your Bright Data or OpenRouter config.",
         );
         return;
       }
@@ -1007,7 +1018,7 @@ export function SovereignDashboard({
 
       const failed = count - runs.length;
       setMessage(
-        `Done: ${runs.length}/${count} model${count > 1 ? "s" : ""} returned results.${failed > 0 ? ` ${failed} failed.` : ""}`,
+        `Done: ${runs.length}/${count} model${count > 1 ? "s" : ""} returned results.${failed > 0 ? ` ${failed} failed. ${failures}` : ""}`,
       );
     } catch (error) {
       setMessage(
@@ -1063,7 +1074,7 @@ export function SovereignDashboard({
     }));
 
     setMessage(
-      `Batch complete: ${allRuns.length} results from ${prompts.length} prompts × ${providers.length} models.${failed > 0 ? ` ${failed} failed.` : ""}`,
+      `Batch complete: ${allRuns.length} results from ${prompts.length} prompts × ${providers.length} models.${failed > 0 ? ` ${failed} failed. ${summarizeFailures(results)}` : ""}`,
     );
     setBusy(false);
   }

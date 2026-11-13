@@ -27,8 +27,10 @@ const InputSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  let provider = "unknown";
   try {
     const body = await req.json();
+    if (typeof body?.provider === "string") provider = body.provider;
     const parsed = InputSchema.parse(body);
     const openRouter = OpenRouterProviderSchema.safeParse(parsed.provider);
     const result = openRouter.success
@@ -40,6 +42,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    // Logged so the reason shows up in Workers Observability; the response
+    // body is the only other place it exists. Never includes the prompt.
+    console.error(`[scrape] ${provider} failed: ${message}`);
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
